@@ -206,6 +206,116 @@
 
   select[multiple] { min-height: 120px; padding: 8px 10px; }
 
+  .pill-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .pill {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text2);
+    background: var(--surface2);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+    user-select: none;
+  }
+  .pill:hover {
+    border-color: var(--text3);
+    color: var(--text);
+    background: var(--surface);
+  }
+  .pill.active {
+    border-color: var(--text);
+    background: var(--surface);
+    color: var(--text);
+    font-weight: 600;
+  }
+  .pill-group--readonly .pill {
+    cursor: default;
+    opacity: 0.92;
+  }
+  .pill-group--readonly .pill:hover {
+    border-color: var(--border);
+    color: var(--text2);
+    background: var(--surface2);
+  }
+
+  .tile-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .platform-option {
+    display: block;
+    cursor: pointer;
+    margin: 0;
+  }
+  .platform-checkbox {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .platform-option .tile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface2);
+    font-size: 13px;
+    color: var(--text2);
+    transition: border-color 0.15s ease, background 0.15s ease;
+    margin: 0;
+  }
+  .platform-option:hover .tile {
+    border-color: var(--text3);
+    color: var(--text);
+  }
+  .platform-checkbox:checked + .tile {
+    border-color: var(--text);
+    background: var(--surface);
+    color: var(--text);
+    font-weight: 600;
+  }
+  .tile-check {
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: transparent;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .platform-checkbox:checked + .tile .tile-check {
+    background: var(--text);
+    border-color: var(--text);
+    color: var(--accent-contrast);
+  }
+  .platform-checkbox:focus-visible + .tile {
+    outline: 2px solid var(--text3);
+    outline-offset: 2px;
+  }
+
+  .field.has-error .pill-group,
+  .field.has-error .tile-grid {
+    outline: 2px solid var(--danger);
+    outline-offset: 1px;
+    border-radius: var(--radius-sm);
+  }
+
   .submit-area { display: flex; align-items: center; justify-content: space-between; margin-top: 1.25rem; gap: 1rem; border-top: 1px solid var(--border); padding-top: 1.25rem; }
   .status-msg { font-size: 13px; color: var(--text3); flex: 1; }
   .btn-group { display: flex; gap: 8px; }
@@ -442,32 +552,29 @@
     <div class="section-header"><div class="section-num">2</div><span class="section-title">Tipo de Criativo</span></div>
 
     <div class="field" id="wrap-formato">
-      <label>Formato <span class="req">*</span></label>
-      <select id="f-formato">
-        <option value="">Selecione</option>
-        <option>Feed estático</option>
-        <option>Carrossel</option>
-        <option>Stories / Reels</option>
-        <option>Vídeo</option>
-        <option>Banner</option>
-        <option value="__outro__">Outro (descrever abaixo)</option>
-      </select>
-      <input type="text" id="f-formato-outro" placeholder="Outro formato..." style="margin-top:8px;">
-      <span class="err-msg">Selecione ou descreva um formato.</span>
+      <label>Formato(s) <span class="req">*</span></label>
+      <div class="pill-group" id="pg-formato" role="group" aria-label="Formatos de criativo">
+        <button type="button" class="pill" role="checkbox" aria-checked="false" data-value="Feed estático">Feed estático</button>
+        <button type="button" class="pill" role="checkbox" aria-checked="false" data-value="Carrossel">Carrossel</button>
+        <button type="button" class="pill" role="checkbox" aria-checked="false" data-value="Stories / Reels">Stories / Reels</button>
+        <button type="button" class="pill" role="checkbox" aria-checked="false" data-value="Vídeo">Vídeo</button>
+        <button type="button" class="pill" role="checkbox" aria-checked="false" data-value="Banner">Banner</button>
+      </div>
+      <input type="text" id="f-formato-outro" placeholder="Outro formato (opcional)" style="margin-top:8px;">
+      <span class="err-msg">Selecione ao menos um formato ou descreva outro.</span>
     </div>
 
     <div class="field" id="wrap-plataforma">
       <label>Plataforma(s) de veiculação <span class="req">*</span></label>
-      <select id="f-plataforma" multiple size="6" aria-label="Plataformas (Ctrl ou Cmd para múltiplas)">
-        <option>Meta (Facebook / Instagram)</option>
-        <option>Google Ads</option>
-        <option>TikTok</option>
-        <option>YouTube</option>
-        <option>LinkedIn</option>
-        <option>WhatsApp</option>
-      </select>
-      <p class="hint" style="margin-top:6px;">Segure Ctrl (Windows) ou Cmd (Mac) para selecionar várias.</p>
-      <input type="text" id="f-plataforma-outro" placeholder="Outra plataforma..." style="margin-top:8px;">
+      <div class="tile-grid" id="tg-plataforma" role="group" aria-label="Plataformas de veiculação">
+        <label class="platform-option"><input class="platform-checkbox" type="checkbox" name="plataforma" value="Meta (Facebook / Instagram)"><span class="tile"><span class="tile-check" aria-hidden="true">✓</span><span>Meta (Facebook / Instagram)</span></span></label>
+        <label class="platform-option"><input class="platform-checkbox" type="checkbox" name="plataforma" value="Google Ads"><span class="tile"><span class="tile-check" aria-hidden="true">✓</span><span>Google Ads</span></span></label>
+        <label class="platform-option"><input class="platform-checkbox" type="checkbox" name="plataforma" value="TikTok"><span class="tile"><span class="tile-check" aria-hidden="true">✓</span><span>TikTok</span></span></label>
+        <label class="platform-option"><input class="platform-checkbox" type="checkbox" name="plataforma" value="YouTube"><span class="tile"><span class="tile-check" aria-hidden="true">✓</span><span>YouTube</span></span></label>
+        <label class="platform-option"><input class="platform-checkbox" type="checkbox" name="plataforma" value="LinkedIn"><span class="tile"><span class="tile-check" aria-hidden="true">✓</span><span>LinkedIn</span></span></label>
+        <label class="platform-option"><input class="platform-checkbox" type="checkbox" name="plataforma" value="WhatsApp"><span class="tile"><span class="tile-check" aria-hidden="true">✓</span><span>WhatsApp</span></span></label>
+      </div>
+      <input type="text" id="f-plataforma-outro" placeholder="Outra plataforma (opcional)" style="margin-top:8px;">
       <span class="err-msg">Selecione ao menos uma plataforma.</span>
     </div>
 
@@ -496,6 +603,18 @@
 
   <div class="section">
     <div class="section-header"><div class="section-num">3</div><span class="section-title">Briefing Criativo</span></div>
+
+    <div class="field copytext-scope-field">
+      <label>Ângulos de copy (fixos no gerador)</label>
+      <p class="hint" style="margin-bottom:8px;">Estes ângulos vêm da especificação inicial e são aplicados em toda geração de copy pela IA (sem escolha no formulário).</p>
+      <div class="pill-group pill-group--readonly" aria-hidden="true">
+        <span class="pill">Antes / Depois</span>
+        <span class="pill">Remarketing</span>
+        <span class="pill">Nativo / Notícia</span>
+        <span class="pill">Promessa + CTA</span>
+        <span class="pill">Comparativo</span>
+      </div>
+    </div>
 
     <div class="field" id="wrap-objetivo">
       <label>Objetivo do anúncio <span class="req">*</span></label>
@@ -617,28 +736,33 @@
 let fd = {};
 let jsPDF = null;
 let isGeneratingCopy = false;
+let selectedFormats = [];
 
 const ACCESS_CODE_KEY = 'solicitacao_criativo_access_code';
 const THEME_STORAGE_KEY = 'aurea_theme_preference';
 let activeTheme = 'light';
 
+/** Match server `api/prompt-matrix.js` LOCKED_COPYTEXT_ITEMS (display only). */
+const LOCKED_COPY_ANGLE_LABELS_PT = [
+  'Antes / Depois',
+  'Remarketing',
+  'Nativo / Notícia',
+  'Promessa + CTA',
+  'Comparativo'
+];
+
 function getSelectedPlatforms() {
-  var sel = document.getElementById('f-plataforma');
-  if (!sel || !sel.options) return [];
-  return Array.prototype.slice.call(sel.selectedOptions)
-    .map(function(opt) { return (opt.textContent || opt.value || '').trim(); })
+  var nodes = document.querySelectorAll('input[name="plataforma"]:checked');
+  return Array.prototype.slice.call(nodes)
+    .map(function(input) { return (input.value || '').trim(); })
     .filter(Boolean);
 }
 
 function collectFormatos() {
-  var sel = document.getElementById('f-formato');
-  if (!sel || !sel.value) return [];
-  if (sel.value === '__outro__') {
-    var o = g('f-formato-outro');
-    return o ? [o] : [];
-  }
-  var label = sel.options[sel.selectedIndex];
-  return label ? [label.textContent.trim()] : [];
+  var extra = g('f-formato-outro');
+  var list = selectedFormats.slice();
+  if (extra) list.push(extra);
+  return list;
 }
 
 function collectDimensoes() {
@@ -651,10 +775,7 @@ function collectDimensoes() {
 }
 
 function formatoValido() {
-  var sel = document.getElementById('f-formato');
-  if (!sel || !sel.value) return '';
-  if (sel.value === '__outro__') return g('f-formato-outro') ? 'ok' : '';
-  return 'ok';
+  return selectedFormats.length > 0 || g('f-formato-outro') ? 'ok' : '';
 }
 
 function plataformasValidas() {
@@ -803,7 +924,7 @@ function boldToHTML(text) {
 }
 
 function getCopyPlaceholderHTML() {
-  return '<p class="r-text" style="color:var(--text3);font-size:13px;">Gere a copy com IA: o servidor aplica a matriz fixa e retorna 5 variações (Meta DCO).</p>';
+  return '<p class="r-text" style="color:var(--text3);font-size:13px;">Gere a copy com IA: o servidor aplica ângulos fixos de copy para cada formato que você escolher.</p>';
 }
 
 function renderCopyLoading() {
@@ -906,14 +1027,14 @@ function buildCopyHTML(d) {
   if (d.cta) html += row('CTA', d.cta);
   if (d.referencias) html += row('Referências', d.referencias);
   html += '<h1>COPY DO CRIATIVO (META)</h1>';
-  html += '<p>Espaço reservado até gerar com IA: 5 variações com Headline, Subheadline, Texto principal e CTA.</p>';
+  html += '<p>Espaço reservado até gerar com IA: uma entrada por combinação de formato × ângulo de copy (Headline, Subheadline, Texto principal e CTA).</p>';
   var extras = [['Elementos obrigatórios', d.obrigatorios], ['O que evitar', d.restricoes], ['Observações', d.obs]].filter(function(e){ return e[1]; });
   if (extras.length) {
     html += '<h1>RESTRIÇÕES E OBSERVAÇÕES</h1>';
     extras.forEach(function(e){ html += row(e[0], e[1]); });
   }
   if (d.copysuggestions && d.copysuggestions.length) {
-    html += '<h1>COPY GERADA (5 VARIAÇÕES)</h1>';
+    html += '<h1>COPY GERADA</h1>';
     d.copysuggestions.forEach(function(c) {
       html += '<h2>' + esc(c.variationLabel || '') + '</h2>';
       html += '<p><strong>Headline:</strong> ' + boldToHTML(c.headline) + '</p>';
@@ -1050,7 +1171,7 @@ function downloadPDF() {
     return String(t || '').replace(/\*\*/g, '');
   }
   if (d.copysuggestions && d.copysuggestions.length) {
-    secTitle('Copy gerada (5 variações)');
+    secTitle('Copy gerada');
     d.copysuggestions.forEach(function(copy) {
       chk(16);
       doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(DARK[0], DARK[1], DARK[2]);
@@ -1098,8 +1219,13 @@ function newForm() {
 function resetForm() {
   document.querySelectorAll('input[type="text"],input[type="password"],textarea,select').forEach(function(el){ el.value = ''; });
   document.querySelectorAll('.field').forEach(function(el){ el.classList.remove('has-error'); });
-  var plat = document.getElementById('f-plataforma');
-  if (plat) Array.prototype.forEach.call(plat.options, function(opt) { opt.selected = false; });
+  selectedFormats = [];
+  document.querySelectorAll('#pg-formato .pill').forEach(function(el) {
+    el.classList.remove('active');
+    el.setAttribute('aria-checked', 'false');
+    el.setAttribute('aria-pressed', 'false');
+  });
+  document.querySelectorAll('input[name="plataforma"]').forEach(function(cb) { cb.checked = false; });
   fd = {};
   isGeneratingCopy = false;
   closeAccessModal();
@@ -1117,6 +1243,7 @@ function buildFormContextLines(d) {
     'Dimensões / Resolução: ' + (d.dimensoes || '(não informado)'),
     'Plataforma(s): ' + (d.plataformas && d.plataformas.length ? d.plataformas.join(', ') : '(não informado)'),
     'Quantidade de versões (briefing): ' + (d.versoes || '(não informado)'),
+    'Ângulos de copy (fixos no sistema, sempre gerados): ' + LOCKED_COPY_ANGLE_LABELS_PT.join(', '),
     '',
     'Objetivo do anúncio:',
     d.objetivo,
@@ -1142,18 +1269,75 @@ function parseCopySuggestions(text) {
   var cur = null;
   var currentKey = null;
 
-  function isKeyLine(line) {
-    return /^\s*(variation|headline|subheadline|texto\s+principal|cta\s*\/\s*bot[aã]o|cta)\s*:/i.test(line);
+  /** Strips `**` only for key classification; do not use on the value. */
+  function normalizeKey(s) {
+    return String(s || '')
+      .replace(/\*\*/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
   }
 
-  lines.forEach(function(line) {
-    var mVar = line.match(/^\s*variation\s*:\s*(.*)$/i);
-    if (mVar) {
+  /**
+   * Splits "Key: value" or `**Key:** value` (bold around key). Value keeps `**` for ad copy
+   * (e.g. `Headline: **Oferta**` uses a plain first colon; value stays intact).
+   */
+  function splitKeyValue(line) {
+    var s = String(line);
+    var mBoldKey = s.match(/^\s*\*\*([^*]+?)\:\*\*\s*(.*)$/);
+    if (mBoldKey) {
+      return { keyRaw: mBoldKey[1], value: mBoldKey[2].trim() };
+    }
+    var i = s.indexOf(':');
+    if (i === -1) return null;
+    return { keyRaw: s.slice(0, i), value: s.slice(i + 1).trim() };
+  }
+
+  function isKeyLine(line) {
+    var kv = splitKeyValue(line);
+    if (!kv) return false;
+    var k = normalizeKey(kv.keyRaw);
+    if (
+      k === 'variation' ||
+      /^varia(ção|cao) (\d+)$/.test(k) ||
+      /^varia(ção|cao)$/.test(k) ||
+      /^variation \d+$/.test(k) ||
+      /^varia(ção|cao) \d+$/.test(k) ||
+      k === 'headline' ||
+      k === 'título' ||
+      k === 'titulo' ||
+      k === 'subheadline' ||
+      k === 'descrição' ||
+      k === 'descricao' ||
+      k === 'texto principal' ||
+      k === 'cta' ||
+      k === 'botão' ||
+      k === 'botao' ||
+      k === 'cta/botão' ||
+      k === 'cta/botao' ||
+      k === 'cta / botão' ||
+      k === 'cta / botao'
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  function dispatchKeyValue(kv) {
+    if (!kv) return;
+    var k = normalizeKey(kv.keyRaw);
+    if (
+      k === 'variation' ||
+      /^varia(ção|cao) (\d+)$/.test(k) ||
+      /^varia(ção|cao)$/.test(k) ||
+      /^variation \d+$/.test(k) ||
+      /^varia(ção|cao) \d+$/.test(k)
+    ) {
       if (cur && (cur.headline || cur.subheadline || cur.texto || cur.cta)) {
         blocks.push(cur);
       }
       cur = {
-        variationLabel: (mVar[1] || '').trim() || '',
+        variationLabel: (kv.value || '').trim() || '',
         headline: '',
         subheadline: '',
         texto: '',
@@ -1163,32 +1347,57 @@ function parseCopySuggestions(text) {
       return;
     }
     if (!cur) return;
-
-    var h = line.match(/^\s*headline\s*:\s*(.*)$/i);
-    if (h) {
-      cur.headline = (h[1] || '').trim();
+    if (k === 'headline' || k === 'título' || k === 'titulo') {
+      cur.headline = (kv.value || '').trim();
       currentKey = 'headline';
       return;
     }
-    var sh = line.match(/^\s*subheadline\s*:\s*(.*)$/i);
-    if (sh) {
-      cur.subheadline = (sh[1] || '').trim();
+    if (k === 'subheadline' || k === 'descrição' || k === 'descricao') {
+      cur.subheadline = (kv.value || '').trim();
       currentKey = 'subheadline';
       return;
     }
-    var tp = line.match(/^\s*texto\s+principal\s*:\s*(.*)$/i);
-    if (tp) {
-      cur.texto = (tp[1] || '').trim();
+    if (k === 'texto principal') {
+      cur.texto = (kv.value || '').trim();
       currentKey = 'texto';
       return;
     }
-    var ctaM = line.match(/^\s*cta\s*\/\s*bot[aã]o\s*:\s*(.*)$/i) || line.match(/^\s*cta\s*:\s*(.*)$/i);
-    if (ctaM) {
-      cur.cta = (ctaM[1] || '').trim();
+    if (k === 'cta' || k === 'botão' || k === 'botao' || k === 'cta/botão' || k === 'cta/botao' || k === 'cta / botão' || k === 'cta / botao') {
+      cur.cta = (kv.value || '').trim();
       currentKey = 'cta';
       return;
     }
+  }
 
+  lines.forEach(function(line) {
+    var kv = splitKeyValue(line);
+    if (kv) {
+      var k = normalizeKey(kv.keyRaw);
+      if (
+        k === 'variation' ||
+        /^varia(ção|cao) (\d+)$/.test(k) ||
+        /^varia(ção|cao)$/.test(k) ||
+        /^variation \d+$/.test(k) ||
+        /^varia(ção|cao) \d+$/.test(k) ||
+        k === 'headline' ||
+        k === 'título' ||
+        k === 'titulo' ||
+        k === 'subheadline' ||
+        k === 'descrição' ||
+        k === 'descricao' ||
+        k === 'texto principal' ||
+        k === 'cta' ||
+        k === 'botão' ||
+        k === 'botao' ||
+        k === 'cta/botão' ||
+        k === 'cta/botao' ||
+        k === 'cta / botão' ||
+        k === 'cta / botao'
+      ) {
+        dispatchKeyValue(kv);
+        return;
+      }
+    }
     if (currentKey && line.trim() && !isKeyLine(line)) {
       cur[currentKey] = (cur[currentKey] + ' ' + line.trim()).trim();
     }
@@ -1300,7 +1509,12 @@ async function generateCopyWithIA(accessCode) {
 
     var parsed = parseCopySuggestions(payload.result || '');
     if (!parsed.length) {
-      showToast('Não foi possível interpretar a resposta da IA. Tente novamente.');
+      var sr = payload.meta && payload.meta.stop_reason;
+      if (sr === 'max_tokens') {
+        showToast('A resposta da IA foi cortada por limite de tamanho. Reduza formatos no briefing ou tente de novo.');
+      } else {
+        showToast('Não foi possível interpretar a resposta da IA. Tente novamente.');
+      }
       return;
     }
 
@@ -1343,20 +1557,38 @@ document.addEventListener('DOMContentLoaded', function() {
     themeDarkBtn.addEventListener('click', function() { setTheme('dark'); });
   }
 
-  var formatoSel = document.getElementById('f-formato');
-  if (formatoSel) {
-    formatoSel.addEventListener('change', function() {
+  function onPillKey(event) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      event.currentTarget.click();
+    }
+  }
+
+  document.querySelectorAll('#pg-formato .pill').forEach(function(el) {
+    el.addEventListener('click', function() {
+      el.classList.toggle('active');
+      var pressed = el.classList.contains('active');
+      el.setAttribute('aria-checked', pressed ? 'true' : 'false');
+      el.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+      var raw = el.getAttribute('data-value') || el.textContent || '';
+      var txt = String(raw).trim();
+      if (pressed) {
+        if (selectedFormats.indexOf(txt) === -1) selectedFormats.push(txt);
+      } else {
+        selectedFormats = selectedFormats.filter(function(f) { return f !== txt; });
+      }
       if (formatoValido()) clearError('wrap-formato');
       updateProgress();
     });
-  }
-  var platSel = document.getElementById('f-plataforma');
-  if (platSel) {
-    platSel.addEventListener('change', function() {
+    el.addEventListener('keydown', onPillKey);
+  });
+
+  document.querySelectorAll('input[name="plataforma"]').forEach(function(cb) {
+    cb.addEventListener('change', function() {
       if (plataformasValidas()) clearError('wrap-plataforma');
       updateProgress();
     });
-  }
+  });
 
   document.getElementById('btnReset').addEventListener('click', resetForm);
   document.getElementById('btnSubmit').addEventListener('click', submitForm);
@@ -1369,8 +1601,8 @@ document.addEventListener('DOMContentLoaded', function() {
       updateProgress();
       var wrap = el.closest('.field');
       if (!wrap || !wrap.classList.contains('has-error')) return;
-      if (el.id === 'f-formato' && formatoValido()) wrap.classList.remove('has-error');
-      else if (el.id === 'f-plataforma' && plataformasValidas()) wrap.classList.remove('has-error');
+      if ((el.id === 'f-formato-outro') && formatoValido()) wrap.classList.remove('has-error');
+      else if (el.name === 'plataforma' && plataformasValidas()) wrap.classList.remove('has-error');
       else if (el.value && el.value.trim && el.value.trim()) wrap.classList.remove('has-error');
     }
     el.addEventListener('input', onFieldChange);
