@@ -83,7 +83,7 @@ Each block corresponds to ONE Variation line.
 
 # Output Formatting
 
-Provide the output strictly in native, high-converting Brazilian Portuguese. Format the output in a clean, easy-to-read Plain Text with the key words bolded where helpful. Include a brief one-sentence justification for the CTA chosen inside each block or once per format group if clearer. Do not use em dash character U+2014 ("—"); use "," or "." instead.
+Provide the output strictly in native, high-converting Brazilian Portuguese. Format the output in a clean, easy-to-read Plain Text with the key words bolded where helpful. Do not include any extra lines, commentary, or prose outside the required machine-parseable fields below (parser-safe output). Do not use em dash character U+2014 ("—"); use "," or "." instead.
 
 Each block MUST use exactly these line prefixes (machine-parseable; include accents):
 

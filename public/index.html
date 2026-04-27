@@ -554,11 +554,11 @@
     <div class="field" id="wrap-formato">
       <label>Formato(s) <span class="req">*</span></label>
       <div class="pill-group" id="pg-formato" role="group" aria-label="Formatos de criativo">
-        <button type="button" class="pill" role="checkbox" aria-checked="false" data-value="Feed estático">Feed estático</button>
-        <button type="button" class="pill" role="checkbox" aria-checked="false" data-value="Carrossel">Carrossel</button>
-        <button type="button" class="pill" role="checkbox" aria-checked="false" data-value="Stories / Reels">Stories / Reels</button>
-        <button type="button" class="pill" role="checkbox" aria-checked="false" data-value="Vídeo">Vídeo</button>
-        <button type="button" class="pill" role="checkbox" aria-checked="false" data-value="Banner">Banner</button>
+        <button type="button" class="pill" aria-pressed="false" data-value="Feed estático">Feed estático</button>
+        <button type="button" class="pill" aria-pressed="false" data-value="Carrossel">Carrossel</button>
+        <button type="button" class="pill" aria-pressed="false" data-value="Stories / Reels">Stories / Reels</button>
+        <button type="button" class="pill" aria-pressed="false" data-value="Vídeo">Vídeo</button>
+        <button type="button" class="pill" aria-pressed="false" data-value="Banner">Banner</button>
       </div>
       <input type="text" id="f-formato-outro" placeholder="Outro formato (opcional)" style="margin-top:8px;">
       <span class="err-msg">Selecione ao menos um formato ou descreva outro.</span>
@@ -605,15 +605,10 @@
     <div class="section-header"><div class="section-num">3</div><span class="section-title">Briefing Criativo</span></div>
 
     <div class="field copytext-scope-field">
-      <label>Ângulos de copy (fixos no gerador)</label>
+      <label id="copyAnglesLabel">Ângulos de copy (fixos no gerador)</label>
       <p class="hint" style="margin-bottom:8px;">Estes ângulos vêm da especificação inicial e são aplicados em toda geração de copy pela IA (sem escolha no formulário).</p>
-      <div class="pill-group pill-group--readonly" aria-hidden="true">
-        <span class="pill">Antes / Depois</span>
-        <span class="pill">Remarketing</span>
-        <span class="pill">Nativo / Notícia</span>
-        <span class="pill">Promessa + CTA</span>
-        <span class="pill">Comparativo</span>
-      </div>
+      <ul id="locked-copy-angles-sr" class="sr-only" aria-labelledby="copyAnglesLabel"></ul>
+      <div class="pill-group pill-group--readonly" role="group" aria-labelledby="copyAnglesLabel" id="locked-copy-angles-visual"></div>
     </div>
 
     <div class="field" id="wrap-objetivo">
@@ -742,8 +737,8 @@ const ACCESS_CODE_KEY = 'solicitacao_criativo_access_code';
 const THEME_STORAGE_KEY = 'aurea_theme_preference';
 let activeTheme = 'light';
 
-/** Match server `api/prompt-matrix.js` LOCKED_COPYTEXT_ITEMS (display only). */
-const LOCKED_COPY_ANGLE_LABELS_PT = [
+/** Populated from GET /api/copy-scope (same source as server LOCKED_COPYTEXT_ITEMS). */
+let LOCKED_COPY_ANGLE_LABELS_PT = [
   'Antes / Depois',
   'Remarketing',
   'Nativo / Notícia',
@@ -751,6 +746,39 @@ const LOCKED_COPY_ANGLE_LABELS_PT = [
   'Comparativo'
 ];
 
+function syncLockedAnglesFromServer(cb) {
+  fetch('/api/copy-scope')
+    .then(function(res) {
+      if (!res.ok) throw new Error('copy-scope');
+      return res.json();
+    })
+    .then(function(data) {
+      var labels = data && data.locked_copytext_labels_pt;
+      if (Array.isArray(labels) && labels.length) {
+        LOCKED_COPY_ANGLE_LABELS_PT = labels.map(function(l) { return String(l || '').trim(); }).filter(Boolean);
+        populateLockedAnglesUI();
+      }
+      if (typeof cb === 'function') cb();
+    })
+    .catch(function() {
+      if (typeof cb === 'function') cb();
+    });
+}
+
+function populateLockedAnglesUI() {
+  var sr = document.getElementById('locked-copy-angles-sr');
+  var visual = document.getElementById('locked-copy-angles-visual');
+  if (sr) {
+    sr.innerHTML = LOCKED_COPY_ANGLE_LABELS_PT.map(function(label) {
+      return '<li>' + escHTML(label) + '</li>';
+    }).join('');
+  }
+  if (visual) {
+    visual.innerHTML = LOCKED_COPY_ANGLE_LABELS_PT.map(function(label) {
+      return '<span class="pill">' + escHTML(label) + '</span>';
+    }).join('');
+  }
+}
 function getSelectedPlatforms() {
   var nodes = document.querySelectorAll('input[name="plataforma"]:checked');
   return Array.prototype.slice.call(nodes)
@@ -1293,39 +1321,8 @@ function parseCopySuggestions(text) {
     return { keyRaw: s.slice(0, i), value: s.slice(i + 1).trim() };
   }
 
-  function isKeyLine(line) {
-    var kv = splitKeyValue(line);
-    if (!kv) return false;
-    var k = normalizeKey(kv.keyRaw);
-    if (
-      k === 'variation' ||
-      /^varia(ção|cao) (\d+)$/.test(k) ||
-      /^varia(ção|cao)$/.test(k) ||
-      /^variation \d+$/.test(k) ||
-      /^varia(ção|cao) \d+$/.test(k) ||
-      k === 'headline' ||
-      k === 'título' ||
-      k === 'titulo' ||
-      k === 'subheadline' ||
-      k === 'descrição' ||
-      k === 'descricao' ||
-      k === 'texto principal' ||
-      k === 'cta' ||
-      k === 'botão' ||
-      k === 'botao' ||
-      k === 'cta/botão' ||
-      k === 'cta/botao' ||
-      k === 'cta / botão' ||
-      k === 'cta / botao'
-    ) {
-      return true;
-    }
-    return false;
-  }
-
-  function dispatchKeyValue(kv) {
-    if (!kv) return;
-    var k = normalizeKey(kv.keyRaw);
+  /** Single classifier for variation vs known field keys (matches parser dispatch). */
+  function classifyParsedKey(k) {
     if (
       k === 'variation' ||
       /^varia(ção|cao) (\d+)$/.test(k) ||
@@ -1333,6 +1330,27 @@ function parseCopySuggestions(text) {
       /^variation \d+$/.test(k) ||
       /^varia(ção|cao) \d+$/.test(k)
     ) {
+      return 'variation';
+    }
+    if (k === 'headline' || k === 'título' || k === 'titulo') return 'headline';
+    if (k === 'subheadline' || k === 'descrição' || k === 'descricao') return 'subheadline';
+    if (k === 'texto principal') return 'texto';
+    if (k === 'cta' || k === 'botão' || k === 'botao' || k === 'cta/botão' || k === 'cta/botao' || k === 'cta / botão' || k === 'cta / botao') {
+      return 'cta';
+    }
+    return null;
+  }
+
+  function isKeyLine(line) {
+    var kv = splitKeyValue(line);
+    if (!kv) return false;
+    return classifyParsedKey(normalizeKey(kv.keyRaw)) !== null;
+  }
+
+  function dispatchKeyValue(kv) {
+    if (!kv) return;
+    var branch = classifyParsedKey(normalizeKey(kv.keyRaw));
+    if (branch === 'variation') {
       if (cur && (cur.headline || cur.subheadline || cur.texto || cur.cta)) {
         blocks.push(cur);
       }
@@ -1347,22 +1365,22 @@ function parseCopySuggestions(text) {
       return;
     }
     if (!cur) return;
-    if (k === 'headline' || k === 'título' || k === 'titulo') {
+    if (branch === 'headline') {
       cur.headline = (kv.value || '').trim();
       currentKey = 'headline';
       return;
     }
-    if (k === 'subheadline' || k === 'descrição' || k === 'descricao') {
+    if (branch === 'subheadline') {
       cur.subheadline = (kv.value || '').trim();
       currentKey = 'subheadline';
       return;
     }
-    if (k === 'texto principal') {
+    if (branch === 'texto') {
       cur.texto = (kv.value || '').trim();
       currentKey = 'texto';
       return;
     }
-    if (k === 'cta' || k === 'botão' || k === 'botao' || k === 'cta/botão' || k === 'cta/botao' || k === 'cta / botão' || k === 'cta / botao') {
+    if (branch === 'cta') {
       cur.cta = (kv.value || '').trim();
       currentKey = 'cta';
       return;
@@ -1371,32 +1389,9 @@ function parseCopySuggestions(text) {
 
   lines.forEach(function(line) {
     var kv = splitKeyValue(line);
-    if (kv) {
-      var k = normalizeKey(kv.keyRaw);
-      if (
-        k === 'variation' ||
-        /^varia(ção|cao) (\d+)$/.test(k) ||
-        /^varia(ção|cao)$/.test(k) ||
-        /^variation \d+$/.test(k) ||
-        /^varia(ção|cao) \d+$/.test(k) ||
-        k === 'headline' ||
-        k === 'título' ||
-        k === 'titulo' ||
-        k === 'subheadline' ||
-        k === 'descrição' ||
-        k === 'descricao' ||
-        k === 'texto principal' ||
-        k === 'cta' ||
-        k === 'botão' ||
-        k === 'botao' ||
-        k === 'cta/botão' ||
-        k === 'cta/botao' ||
-        k === 'cta / botão' ||
-        k === 'cta / botao'
-      ) {
-        dispatchKeyValue(kv);
-        return;
-      }
+    if (kv && classifyParsedKey(normalizeKey(kv.keyRaw))) {
+      dispatchKeyValue(kv);
+      return;
     }
     if (currentKey && line.trim() && !isKeyLine(line)) {
       cur[currentKey] = (cur[currentKey] + ' ' + line.trim()).trim();
@@ -1557,6 +1552,10 @@ document.addEventListener('DOMContentLoaded', function() {
     themeDarkBtn.addEventListener('click', function() { setTheme('dark'); });
   }
 
+  populateLockedAnglesUI();
+
+  syncLockedAnglesFromServer();
+
   function onPillKey(event) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -1568,7 +1567,6 @@ document.addEventListener('DOMContentLoaded', function() {
     el.addEventListener('click', function() {
       el.classList.toggle('active');
       var pressed = el.classList.contains('active');
-      el.setAttribute('aria-checked', pressed ? 'true' : 'false');
       el.setAttribute('aria-pressed', pressed ? 'true' : 'false');
       var raw = el.getAttribute('data-value') || el.textContent || '';
       var txt = String(raw).trim();
