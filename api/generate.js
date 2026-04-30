@@ -52,7 +52,7 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        // Many structured blocks (formats × locked angles); 4k truncates → parse failures.
+        // Large structured outputs (formats × angles); low max_tokens truncates → parse failures.
         max_tokens: 16384,
         system: META_ADS_MATRIX,
         messages: [{ role: 'user', content: userMessage }]
@@ -74,6 +74,7 @@ module.exports = async function handler(req, res) {
         output_tokens: usage.output_tokens
       });
     } else if (stopReason && stopReason !== 'end_turn') {
+      // Avoid logging every normal completion; only unusual stop reasons
       const usage = data.usage || {};
       console.info('Anthropic generate', {
         stop_reason: stopReason,

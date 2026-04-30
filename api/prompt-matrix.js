@@ -99,6 +99,8 @@ CTA/Botão:
 
 Use \`Variation:\` first line of EVERY block. After \`Variation:\`, write which creative format and which locked angle apply (e.g. \`Variation: Feed estático · Promessa + CTA\`).
 
+CRITICAL (machine parse): Each block must use only these exact line prefixes as written (case-sensitive, including punctuation and diacritics): "Variation:", "Headline:", "Subheadline:", "Texto principal:", "CTA/Botão:". Do not substitute Portuguese equivalents such as "Variação" or "Título" as the prefix token. Ad copy stays Brazilian Portuguese.
+
 Repeat until all required combinations are covered.`;
 
 const MAX_FORM_CONTEXT = 40000;
