@@ -269,6 +269,15 @@ select {
   color: var(--accent-contrast);
   font-weight: 500;
 }
+.pill-group--readonly .pill {
+  cursor: default;
+  opacity: 0.95;
+}
+.pill-group--readonly .pill:hover {
+  border-color: var(--border);
+  color: var(--text2);
+  background: var(--surface2);
+}
 .pill:focus-visible, .platform-checkbox:focus-visible + .tile {
   outline: 2px solid var(--border2);
   outline-offset: 2px;

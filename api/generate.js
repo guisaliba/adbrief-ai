@@ -52,7 +52,7 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        // Five structured blocks; 4k was tight and can truncate (stop_reason max_tokens) → unparseable output.
+        // Large structured outputs (formats × angles); low max_tokens truncates → parse failures.
         max_tokens: 16384,
         system: META_ADS_MATRIX,
         messages: [{ role: 'user', content: userMessage }]

@@ -36,7 +36,7 @@
     <p class="header-sub">Preencha os campos obrigatórios para gerar o briefing e, se desejar, a copy com IA.</p>
     <div class="progress-wrap">
       <div class="progress-bar-outer"><div class="progress-bar-inner" id="progressBar"></div></div>
-      <span class="progress-label" id="progressLabel">0 de 7 campos</span>
+      <span class="progress-label" id="progressLabel">0 de 8 campos</span>
     </div>
   </div>
 
@@ -71,16 +71,17 @@
   <div class="section">
     <div class="section-header"><div class="section-num">2</div><span class="section-title">Tipo de Criativo</span></div>
 
-    <div class="field">
-      <label>Formatos gerados automaticamente</label>
-      <div class="locked-scope" aria-label="Formatos fixos enviados para a IA">
-        <span class="r-tag">Feed estático</span>
-        <span class="r-tag">Carrossel</span>
-        <span class="r-tag">Stories / Reels</span>
-        <span class="r-tag">Vídeo</span>
-        <span class="r-tag">Banner</span>
+    <div class="field" id="wrap-formato">
+      <label>Formato(s) <span class="req">*</span></label>
+      <div class="pill-group" id="pg-formato" role="group" aria-label="Formatos de criativo">
+        <button type="button" class="pill" aria-pressed="false" data-value="Feed estático">Feed estático</button>
+        <button type="button" class="pill" aria-pressed="false" data-value="Carrossel">Carrossel</button>
+        <button type="button" class="pill" aria-pressed="false" data-value="Stories / Reels">Stories / Reels</button>
+        <button type="button" class="pill" aria-pressed="false" data-value="Vídeo">Vídeo</button>
+        <button type="button" class="pill" aria-pressed="false" data-value="Banner">Banner</button>
       </div>
-      <p class="hint">Esses formatos são fixos e enviados à IA em toda geração de copy.</p>
+      <input type="text" id="f-formato-outro" class="field-input-conditional" placeholder="Outro formato (opcional)">
+      <span class="err-msg">Selecione ao menos um formato ou descreva outro.</span>
     </div>
 
     <div class="field" id="wrap-plataforma">
@@ -123,6 +124,13 @@
 
   <div class="section">
     <div class="section-header"><div class="section-num">3</div><span class="section-title">Briefing Criativo</span></div>
+
+    <div class="field copytext-scope-field">
+      <label id="copyAnglesLabel">Ângulos de copy (fixos no gerador)</label>
+      <p class="hint">Estes ângulos vêm da especificação inicial e são aplicados em toda geração de copy pela IA (sem escolha no formulário).</p>
+      <ul id="locked-copy-angles-sr" class="sr-only" aria-labelledby="copyAnglesLabel"></ul>
+      <div class="pill-group pill-group--readonly" role="group" aria-labelledby="copyAnglesLabel" id="locked-copy-angles-visual"></div>
+    </div>
 
     <div class="field" id="wrap-objetivo">
       <label>Objetivo do anúncio <span class="req">*</span></label>
@@ -237,14 +245,8 @@
 </div>
 
 <script>
-const LOCKED_CREATIVE_FORMATS = [
-  'Feed estático',
-  'Carrossel',
-  'Stories / Reels',
-  'Vídeo',
-  'Banner'
-];
 let selectedDimensoes = [];
+let selectedFormats = [];
 let fd = {};
 let jsPDF = null;
 let isGeneratingCopy = false;
@@ -253,14 +255,60 @@ const ACCESS_CODE_KEY = 'solicitacao_criativo_access_code';
 const THEME_STORAGE_KEY = 'aurea_theme_preference';
 let activeTheme = 'light';
 
+/** Populated from GET /api/copy-scope (same source as server LOCKED_COPYTEXT_ITEMS). */
+let LOCKED_COPY_ANGLE_LABELS_PT = [
+  'Antes / Depois',
+  'Remarketing',
+  'Nativo / Notícia',
+  'Promessa + CTA',
+  'Comparativo'
+];
+
+function syncLockedAnglesFromServer(cb) {
+  fetch('/api/copy-scope')
+    .then(function(res) {
+      if (!res.ok) throw new Error('copy-scope');
+      return res.json();
+    })
+    .then(function(data) {
+      var labels = data && data.locked_copytext_labels_pt;
+      if (Array.isArray(labels) && labels.length) {
+        LOCKED_COPY_ANGLE_LABELS_PT = labels.map(function(l) { return String(l || '').trim(); }).filter(Boolean);
+        populateLockedAnglesUI();
+      }
+      if (typeof cb === 'function') cb();
+    })
+    .catch(function() {
+      if (typeof cb === 'function') cb();
+    });
+}
+
+function populateLockedAnglesUI() {
+  var sr = document.getElementById('locked-copy-angles-sr');
+  var visual = document.getElementById('locked-copy-angles-visual');
+  if (sr) {
+    sr.innerHTML = LOCKED_COPY_ANGLE_LABELS_PT.map(function(label) {
+      return '<li>' + escHTML(label) + '</li>';
+    }).join('');
+  }
+  if (visual) {
+    visual.innerHTML = LOCKED_COPY_ANGLE_LABELS_PT.map(function(label) {
+      return '<span class="pill">' + escHTML(label) + '</span>';
+    }).join('');
+  }
+}
+
 function getSelectedPlatforms() {
   return Array.prototype.slice.call(document.querySelectorAll('input[name="plataforma"]:checked'))
-    .map(function(input) { return input.value.trim(); })
+    .map(function(input) { return (input.value || '').trim(); })
     .filter(Boolean);
 }
 
 function collectFormatos() {
-  return LOCKED_CREATIVE_FORMATS.slice();
+  var extra = g('f-formato-outro');
+  var list = selectedFormats.slice();
+  if (extra) list.push(extra);
+  return list;
 }
 
 function collectDimensoes() {
@@ -271,6 +319,10 @@ function collectDimensoes() {
   return deduped.filter(Boolean).join(', ');
 }
 
+function formatoValido() {
+  return selectedFormats.length > 0 || g('f-formato-outro') ? 'ok' : '';
+}
+
 function plataformasValidas() {
   return getSelectedPlatforms().length > 0 || g('f-plataforma-outro') ? 'ok' : '';
 }
@@ -278,6 +330,7 @@ function plataformasValidas() {
 const REQUIRED = [
   { val: () => g('f-nome'),      wrap: 'wrap-nome' },
   { val: () => g('f-campanha'),  wrap: 'wrap-campanha' },
+  { val: () => formatoValido(), wrap: 'wrap-formato' },
   { val: () => plataformasValidas(), wrap: 'wrap-plataforma' },
   { val: () => document.getElementById('f-versoes').value, wrap: 'wrap-versoes' },
   { val: () => g('f-objetivo'),  wrap: 'wrap-objetivo' },
@@ -421,7 +474,7 @@ function boldToHTML(text) {
 }
 
 function getCopyPlaceholderHTML() {
-  return '<p class="copy-hint r-text">Gere a copy com IA: o servidor aplica a matriz fixa e retorna 5 variações (Meta DCO).</p>';
+  return '<p class="copy-hint r-text">Gere a copy com IA: ângulos fixos no servidor para cada formato que você escolher.</p>';
 }
 
 function renderCopyLoading() {
@@ -525,14 +578,14 @@ function buildCopyHTML(d) {
   if (d.cta) html += row('CTA', d.cta);
   if (d.referencias) html += row('Referências', d.referencias);
   html += '<h1>COPY DO CRIATIVO (META)</h1>';
-  html += '<p>Espaço reservado até gerar com IA: 5 variações com Headline, Subheadline, Texto principal e CTA.</p>';
+  html += '<p>Espaço reservado até gerar com IA: uma entrada por combinação de formato × ângulo (Headline, Subheadline, Texto principal e CTA).</p>';
   var extras = [['Elementos obrigatórios', d.obrigatorios], ['O que evitar', d.restricoes], ['Observações', d.obs]].filter(function(e){ return e[1]; });
   if (extras.length) {
     html += '<h1>RESTRIÇÕES E OBSERVAÇÕES</h1>';
     extras.forEach(function(e){ html += row(e[0], e[1]); });
   }
   if (d.copysuggestions && d.copysuggestions.length) {
-    html += '<h1>COPY GERADA (5 VARIAÇÕES)</h1>';
+    html += '<h1>COPY GERADA</h1>';
     d.copysuggestions.forEach(function(c) {
       html += '<h2>' + esc(c.variationLabel || '') + '</h2>';
       html += '<p><strong>Headline:</strong> ' + boldToHTML(c.headline) + '</p>';
@@ -619,7 +672,7 @@ function downloadPDF() {
     return String(t || '').replace(/\*\*/g, '');
   }
   if (d.copysuggestions && d.copysuggestions.length) {
-    secTitle('Copy gerada (5 variações)');
+    secTitle('Copy gerada');
     d.copysuggestions.forEach(function(copy) {
       chk(16);
       doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(DARK[0], DARK[1], DARK[2]);
@@ -667,9 +720,14 @@ function newForm() {
 function resetForm() {
   document.querySelectorAll('input[type="text"],input[type="password"],textarea,select').forEach(function(el){ el.value = ''; });
   document.querySelectorAll('input[type="checkbox"]').forEach(function(el){ el.checked = false; });
-  document.querySelectorAll('.pill').forEach(function(el){ el.classList.remove('active'); el.setAttribute('aria-pressed', 'false'); });
+  document.querySelectorAll('#pg-dimensoes .pill').forEach(function(el){ el.classList.remove('active'); el.setAttribute('aria-pressed', 'false'); });
   document.querySelectorAll('.field').forEach(function(el){ el.classList.remove('has-error'); });
   selectedDimensoes = [];
+  selectedFormats = [];
+  document.querySelectorAll('#pg-formato .pill').forEach(function(el) {
+    el.classList.remove('active');
+    el.setAttribute('aria-pressed', 'false');
+  });
   fd = {};
   isGeneratingCopy = false;
   closeAccessModal();
@@ -684,10 +742,11 @@ function buildFormContextLines(d) {
     'Campanha / Projeto: ' + d.campanha,
     d.cliente ? 'Cliente: ' + d.cliente : null,
     d.produto ? 'Produto / Link: ' + d.produto : null,
-    'Formato(s) criativo(s) fixo(s), sem seleção manual do usuário: ' + (d.formatos && d.formatos.length ? d.formatos.join(', ') : '(não informado)'),
+    'Formato(s): ' + (d.formatos && d.formatos.length ? d.formatos.join(', ') : '(não informado)'),
     'Dimensões / Resolução: ' + (d.dimensoes || '(não informado)'),
     'Plataforma(s): ' + (d.plataformas && d.plataformas.length ? d.plataformas.join(', ') : '(não informado)'),
     'Quantidade de versões (briefing): ' + (d.versoes || '(não informado)'),
+    'Ângulos de copy (fixos no sistema, sempre gerados): ' + LOCKED_COPY_ANGLE_LABELS_PT.join(', '),
     '',
     'Objetivo do anúncio:',
     d.objetivo,
@@ -737,39 +796,7 @@ function parseCopySuggestions(text) {
     return { keyRaw: s.slice(0, i), value: s.slice(i + 1).trim() };
   }
 
-  function isKeyLine(line) {
-    var kv = splitKeyValue(line);
-    if (!kv) return false;
-    var k = normalizeKey(kv.keyRaw);
-    if (
-      k === 'variation' ||
-      /^varia(ção|cao) (\d+)$/.test(k) ||
-      /^varia(ção|cao)$/.test(k) ||
-      /^variation \d+$/.test(k) ||
-      /^varia(ção|cao) \d+$/.test(k) ||
-      k === 'headline' ||
-      k === 'título' ||
-      k === 'titulo' ||
-      k === 'subheadline' ||
-      k === 'descrição' ||
-      k === 'descricao' ||
-      k === 'texto principal' ||
-      k === 'cta' ||
-      k === 'botão' ||
-      k === 'botao' ||
-      k === 'cta/botão' ||
-      k === 'cta/botao' ||
-      k === 'cta / botão' ||
-      k === 'cta / botao'
-    ) {
-      return true;
-    }
-    return false;
-  }
-
-  function dispatchKeyValue(kv) {
-    if (!kv) return;
-    var k = normalizeKey(kv.keyRaw);
+  function classifyParsedKey(k) {
     if (
       k === 'variation' ||
       /^varia(ção|cao) (\d+)$/.test(k) ||
@@ -777,6 +804,27 @@ function parseCopySuggestions(text) {
       /^variation \d+$/.test(k) ||
       /^varia(ção|cao) \d+$/.test(k)
     ) {
+      return 'variation';
+    }
+    if (k === 'headline' || k === 'título' || k === 'titulo') return 'headline';
+    if (k === 'subheadline' || k === 'descrição' || k === 'descricao') return 'subheadline';
+    if (k === 'texto principal') return 'texto';
+    if (k === 'cta' || k === 'botão' || k === 'botao' || k === 'cta/botão' || k === 'cta/botao' || k === 'cta / botão' || k === 'cta / botao') {
+      return 'cta';
+    }
+    return null;
+  }
+
+  function isKeyLine(line) {
+    var kv = splitKeyValue(line);
+    if (!kv) return false;
+    return classifyParsedKey(normalizeKey(kv.keyRaw)) !== null;
+  }
+
+  function dispatchKeyValue(kv) {
+    if (!kv) return;
+    var branch = classifyParsedKey(normalizeKey(kv.keyRaw));
+    if (branch === 'variation') {
       if (cur && (cur.headline || cur.subheadline || cur.texto || cur.cta)) {
         blocks.push(cur);
       }
@@ -791,22 +839,22 @@ function parseCopySuggestions(text) {
       return;
     }
     if (!cur) return;
-    if (k === 'headline' || k === 'título' || k === 'titulo') {
+    if (branch === 'headline') {
       cur.headline = (kv.value || '').trim();
       currentKey = 'headline';
       return;
     }
-    if (k === 'subheadline' || k === 'descrição' || k === 'descricao') {
+    if (branch === 'subheadline') {
       cur.subheadline = (kv.value || '').trim();
       currentKey = 'subheadline';
       return;
     }
-    if (k === 'texto principal') {
+    if (branch === 'texto') {
       cur.texto = (kv.value || '').trim();
       currentKey = 'texto';
       return;
     }
-    if (k === 'cta' || k === 'botão' || k === 'botao' || k === 'cta/botão' || k === 'cta/botao' || k === 'cta / botão' || k === 'cta / botao') {
+    if (branch === 'cta') {
       cur.cta = (kv.value || '').trim();
       currentKey = 'cta';
       return;
@@ -815,32 +863,9 @@ function parseCopySuggestions(text) {
 
   lines.forEach(function(line) {
     var kv = splitKeyValue(line);
-    if (kv) {
-      var k = normalizeKey(kv.keyRaw);
-      if (
-        k === 'variation' ||
-        /^varia(ção|cao) (\d+)$/.test(k) ||
-        /^varia(ção|cao)$/.test(k) ||
-        /^variation \d+$/.test(k) ||
-        /^varia(ção|cao) \d+$/.test(k) ||
-        k === 'headline' ||
-        k === 'título' ||
-        k === 'titulo' ||
-        k === 'subheadline' ||
-        k === 'descrição' ||
-        k === 'descricao' ||
-        k === 'texto principal' ||
-        k === 'cta' ||
-        k === 'botão' ||
-        k === 'botao' ||
-        k === 'cta/botão' ||
-        k === 'cta/botao' ||
-        k === 'cta / botão' ||
-        k === 'cta / botao'
-      ) {
-        dispatchKeyValue(kv);
-        return;
-      }
+    if (kv && classifyParsedKey(normalizeKey(kv.keyRaw))) {
+      dispatchKeyValue(kv);
+      return;
     }
     if (currentKey && line.trim() && !isKeyLine(line)) {
       cur[currentKey] = (cur[currentKey] + ' ' + line.trim()).trim();
@@ -955,7 +980,7 @@ async function generateCopyWithIA(accessCode) {
     var parsed = parseCopySuggestions(raw);
     if (!parsed.length) {
       if (payload.meta && payload.meta.stop_reason === 'max_tokens') {
-        showToast('A resposta da IA foi cortada (limite de tamanho). Tente de novo; se persistir, avise o suporte.');
+        showToast('A resposta da IA foi cortada (limite de tamanho). Reduza os formatos selecionados ou tente de novo; se persistir, avise o suporte.');
       } else {
         showToast('Não foi possível interpretar a resposta da IA. Tente novamente.');
       }
@@ -1001,12 +1026,33 @@ document.addEventListener('DOMContentLoaded', function() {
     themeDarkBtn.addEventListener('click', function() { setTheme('dark'); });
   }
 
+  populateLockedAnglesUI();
+  syncLockedAnglesFromServer();
+
   function onPillKey(event) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       event.currentTarget.click();
     }
   }
+
+  document.querySelectorAll('#pg-formato .pill').forEach(function(el) {
+    el.addEventListener('click', function() {
+      el.classList.toggle('active');
+      var pressed = el.classList.contains('active');
+      el.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+      var raw = el.getAttribute('data-value') || el.textContent || '';
+      var txt = String(raw).trim();
+      if (pressed) {
+        if (selectedFormats.indexOf(txt) === -1) selectedFormats.push(txt);
+      } else {
+        selectedFormats = selectedFormats.filter(function(f) { return f !== txt; });
+      }
+      if (formatoValido()) clearError('wrap-formato');
+      updateProgress();
+    });
+    el.addEventListener('keydown', onPillKey);
+  });
 
   document.querySelectorAll('#pg-dimensoes .pill').forEach(function(el) {
     el.addEventListener('click', function() {
@@ -1040,7 +1086,8 @@ document.addEventListener('DOMContentLoaded', function() {
       updateProgress();
       var wrap = el.closest('.field');
       if (!wrap || !wrap.classList.contains('has-error')) return;
-      if (el.id === 'f-plataforma-outro' && plataformasValidas()) wrap.classList.remove('has-error');
+      if (el.id === 'f-formato-outro' && formatoValido()) wrap.classList.remove('has-error');
+      else if (el.id === 'f-plataforma-outro' && plataformasValidas()) wrap.classList.remove('has-error');
       else if (el.value && el.value.trim && el.value.trim()) wrap.classList.remove('has-error');
     }
     el.addEventListener('input', onFieldChange);
