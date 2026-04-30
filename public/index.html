@@ -1250,7 +1250,6 @@ function resetForm() {
   selectedFormats = [];
   document.querySelectorAll('#pg-formato .pill').forEach(function(el) {
     el.classList.remove('active');
-    el.setAttribute('aria-checked', 'false');
     el.setAttribute('aria-pressed', 'false');
   });
   document.querySelectorAll('input[name="plataforma"]').forEach(function(cb) { cb.checked = false; });
